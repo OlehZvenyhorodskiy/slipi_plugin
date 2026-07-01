@@ -8,6 +8,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -120,7 +121,7 @@ public final class UniqueTntListener implements Listener {
 
     // IMPORTANT: we must run before other plugins potentially mutate the block list.
     // HIGHEST ensures our custom TNT block filtering is applied reliably.
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onExplode(EntityExplodeEvent e) {
         final Entity exploding = e.getEntity();
         if (exploding == null) return;
@@ -169,13 +170,14 @@ public final class UniqueTntListener implements Listener {
         }
 
         // Drop spawners (preserving mob) instead of destroying them.
-        // Works even if WorldGuard prevents block damage (fallback scan).
+        // SECURITY: Only drop if the TNT owner has permission in the claim.
+        UUID tntOwner = resolveTntOwner(exploding);
         Set<String> processed = new HashSet<>();
 
         var it = e.blockList().iterator();
         while (it.hasNext()) {
             Block b = it.next();
-            if (tryDropSpawner(b, processed)) {
+            if (tryDropSpawner(b, processed, tntOwner)) {
                 it.remove();
             }
         }
@@ -188,7 +190,7 @@ public final class UniqueTntListener implements Listener {
                 for (int dz = -r; dz <= r; dz++) {
                     Block b = c.getWorld().getBlockAt(c.getBlockX() + dx, c.getBlockY() + dy, c.getBlockZ() + dz);
                     if (b.getLocation().distanceSquared(c) > 25.0) continue; // ~5 blocks
-                    tryDropSpawner(b, processed);
+                    tryDropSpawner(b, processed, tntOwner);
                 }
             }
         }
@@ -320,15 +322,18 @@ public final class UniqueTntListener implements Listener {
     }
 
     private void applyObsidianTnt(EntityExplodeEvent e) {
+        final Entity exploding = e.getEntity();
         Location c = e.getLocation();
         if (c == null || c.getWorld() == null) return;
+
+        // Resolve who is responsible for this explosion
+        UUID tntOwner = resolveTntOwner(exploding);
 
         // This TNT always uses custom handling. Prevent vanilla block breaking/drops first.
         try { e.blockList().clear(); } catch (Throwable ignored) {}
 
         // If there are active guardians in the private region where this TNT explodes (or very close to it),
         // then the TNT must NOT explode: no damage, no block breaking, and it drops back as an item.
-        // A warning is broadcast to players near the private block (anchor).
         if (shouldBlockObsidianTntDueToGuardians(c)) {
             try {
                 e.setCancelled(true);
@@ -345,7 +350,7 @@ public final class UniqueTntListener implements Listener {
         //  ANCIENT_DEBRIS   -> CRYING_OBSIDIAN   (replace in place, no drops)
         //  CRYING_OBSIDIAN  -> OBSIDIAN          (replace in place, no drops)
         //  OBSIDIAN         -> drop OBSIDIAN     (block disappears and item drops)
-        // Search in a small cube around the explosion so adjacent blocks are always found reliably.
+        // SECURITY: Check claim ownership before every block modification.
         final int r = 1;
         for (int dx = -r; dx <= r; dx++) {
             for (int dy = -r; dy <= r; dy++) {
@@ -356,6 +361,11 @@ public final class UniqueTntListener implements Listener {
                             c.getBlockZ() + dz
                     );
                     if (b == null) continue;
+
+                    // SECURITY FIX: Skip blocks in claims where the TNT owner has no permission
+                    if (tntOwner != null && isBlockedByClaim(b.getLocation(), tntOwner)) {
+                        continue;
+                    }
 
                     Material m = b.getType();
                     try {
@@ -378,9 +388,11 @@ public final class UniqueTntListener implements Listener {
         Location c = e.getLocation();
         if (c == null || c.getWorld() == null) return;
 
+        // Resolve who is responsible for this explosion
+        UUID tntOwner = resolveTntOwner(exploding);
+
         // If guardians are active in the region where this TNT explodes, block block-damage,
         // but still deal damage to the guardians of THIS region.
-        // IMPORTANT: no TNT item drop and no chat message.
         try {
             final AquaPrivatePlugin app = plugin;
             if (app.guardianParrot() != null && app.store() != null && app.wg().isReady()) {
@@ -431,11 +443,17 @@ public final class UniqueTntListener implements Listener {
             Material legacySpawner = Material.matchMaterial("MOB_SPAWNER");
             if (legacySpawner != null) forbidden.add(legacySpawner);
         } catch (Throwable ignored) {}
+
         for (int dx = -r; dx <= r; dx++) {
             for (int dy = -r; dy <= r; dy++) {
                 for (int dz = -r; dz <= r; dz++) {
                     Block b = c.getWorld().getBlockAt(c.getBlockX() + dx, c.getBlockY() + dy, c.getBlockZ() + dz);
                     if (b == null) continue;
+
+                    // SECURITY FIX: Skip blocks in claims where the TNT owner has no permission
+                    if (tntOwner != null && isBlockedByClaim(b.getLocation(), tntOwner)) {
+                        continue;
+                    }
 
                     Material m = b.getType();
                     if (m == Material.AIR) continue;
@@ -566,16 +584,69 @@ public final class UniqueTntListener implements Listener {
         return out;
     }
 
+    private boolean isBlockedByClaim(Location loc, UUID playerUuid) {
+        if (loc == null || loc.getWorld() == null || playerUuid == null) return false;
+        try {
+            if (!plugin.wg().isReady()) return false;
+            RegionManager rm = WorldGuard.getInstance().getPlatform()
+                    .getRegionContainer().get(BukkitAdapter.adapt(loc.getWorld()));
+            if (rm == null) return false;
 
-    private boolean tryDropSpawner(Block b, Set<String> processed) {
+            BlockVector3 pt = BlockVector3.at(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+            ApplicableRegionSet set = rm.getApplicableRegions(pt);
+            if (set == null || set.size() == 0) return false;
+
+            for (ProtectedRegion reg : set) {
+                if (reg == null) continue;
+                String id = reg.getId();
+                if (id == null || id.isBlank()) continue;
+
+                Optional<me.aquaprivate.model.PrivateRecord> opt = plugin.store().byRegionId(id);
+                if (opt.isEmpty()) continue;
+
+                me.aquaprivate.model.PrivateRecord pr = opt.get();
+                // If the player is the owner, allow
+                if (pr.owner != null && pr.owner.equals(playerUuid)) return false;
+                // If the player is a member, allow
+                if (pr.members != null && pr.members.contains(playerUuid)) return false;
+                // Player is not owner nor member - block this action
+                return true;
+            }
+        } catch (Throwable ignored) {}
+        return false;
+    }
+
+    private UUID resolveTntOwner(Entity entity) {
+        if (entity == null) return null;
+        // For TNTPrimed, Bukkit API provides getSource() since 1.11+
+        if (entity instanceof TNTPrimed tnt) {
+            Entity source = tnt.getSource();
+            if (source instanceof Player p) return p.getUniqueId();
+        }
+        // For TNT minecarts, check PDC for owner info set during crafting/placement
+        try {
+            String ownerStr = entity.getPersistentDataContainer()
+                    .get(new NamespacedKey(plugin, "tnt_owner"), PersistentDataType.STRING);
+            if (ownerStr != null) return UUID.fromString(ownerStr);
+        } catch (Throwable ignored) {}
+        return null;
+    }
+
+
+    private boolean tryDropSpawner(Block b, Set<String> processed, UUID tntOwner) {
         if (b == null || b.getType() != Material.SPAWNER) return false;
+
+        // SECURITY FIX: Check if this spawner is inside another player's private claim.
+        // If the TNT owner does not have permission in this claim, do NOT drop the spawner.
+        if (tntOwner != null && isBlockedByClaim(b.getLocation(), tntOwner)) {
+            return false; // Spawner is protected - leave it untouched
+        }
+
         String k = locKey(b.getLocation());
         if (processed.contains(k)) return true;
         if (!(b.getState() instanceof CreatureSpawner spawner)) return false;
 
         // Create a normalized spawner item so identical mob-spawners stack properly.
-        // IMPORTANT: drop exactly ONE spawner item (preserving the mob type).
-        // Do NOT also drop a raw spawner item, otherwise it duplicates.
         ItemStack drop = createSpawnerItem(spawner.getSpawnedType());
         processed.add(k);
 

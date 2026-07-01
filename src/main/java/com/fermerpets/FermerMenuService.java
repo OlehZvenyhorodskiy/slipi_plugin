@@ -265,6 +265,22 @@ private java.util.List<String> cfgLore(String path, java.util.List<String> def){
         }
     }
 
+    /**
+     * Returns true if the viewer is the owner of the private region (or an admin/OP).
+     * Members are NOT considered owners for sensitive financial operations.
+     */
+    private boolean isOwnerOrAdmin(Player viewer) {
+        if (viewer == null) return false;
+        if (viewer.isOp()) return true;
+        try {
+            PrivateRecord pr = resolvePrivateFor(viewer);
+            if (pr == null) return true; // No private context = viewer's own menu, allow
+            return pr.owner != null && pr.owner.equals(viewer.getUniqueId());
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     private String applyPrivatePlaceholders(Player viewer, String text) {
         if (text == null) return null;
         try {
@@ -930,6 +946,13 @@ renderGlobalHopperButton(p, inv, farmerIndex);
                 if (hasAnyTokens(p, farmerIndex)) deleteTokens(p, privateOwner, farmerIndex);
                 giveTokens(p, privateOwner, farmerIndex);
             } else if (raw == slotDel){
+                // SECURITY FIX: Only the private owner (or admins) can delete hoppers.
+                // Members must NOT be able to break the owner's collection hopper.
+                if (!isOwnerOrAdmin(p)) {
+                    e.setCancelled(true);
+                    p.sendMessage(org.bukkit.ChatColor.RED + "Только владелец привата может удалять воронку.");
+                    return;
+                }
                 java.util.UUID privateOwner = null;
                 try { PrivateRecord pr = resolvePrivateFor(p); if (pr != null) privateOwner = pr.owner; } catch (Throwable ignored) {}
                 deleteTokens(p, privateOwner, farmerIndex);
@@ -938,6 +961,14 @@ renderGlobalHopperButton(p, inv, farmerIndex);
         }
 
         // --- Editable amethyst slot
+        // SECURITY FIX: Only the private owner (or admins) may interact with amethyst storage.
+        // Members can VIEW the amethysts but cannot take them.
+        if (!isOwnerOrAdmin(p)) {
+            e.setCancelled(true);
+            p.sendMessage(org.bukkit.ChatColor.RED + "Только владелец привата может забирать аметисты.");
+            return;
+        }
+
         // Allow moving only amethysts, and only between cursor/player inv and these slots.
         ItemStack cur = e.getCurrentItem();
         ItemStack cursor = e.getCursor();
@@ -984,6 +1015,12 @@ renderGlobalHopperButton(p, inv, farmerIndex);
     private void handleFarmerToggleClick(Player p, Inventory top, int idx){
         if (p == null || top == null) return;
         if (idx < 1 || idx > 3) return;
+
+        // SECURITY FIX: Only the private owner (or admins) can summon/unsummon farmers.
+        if (!isOwnerOrAdmin(p)) {
+            p.sendMessage(org.bukkit.ChatColor.RED + "Только владелец привата может управлять фермерами.");
+            return;
+        }
 
         // In private context, farmers belong to the PRIVATE OWNER (not necessarily the viewer).
         java.util.UUID ownerId = p.getUniqueId();
@@ -1096,6 +1133,18 @@ renderGlobalHopperButton(p, inv, farmerIndex);
         if (!(e.getWhoClicked() instanceof Player p)) return;
         if (e.getView() == null || e.getView().getTopInventory() == null) return;
         if (!(e.getView().getTopInventory().getHolder() instanceof FarmerMenuHolder)) return;
+
+        // SECURITY FIX: Non-owners cannot drag items out of amethyst slots
+        if (!isOwnerOrAdmin(p)) {
+            // Check if any dragged slot is an amethyst slot
+            for (int raw : e.getRawSlots()){
+                if (raw < e.getView().getTopInventory().getSize() && isAmethystSlot(raw)){
+                    e.setCancelled(true);
+                    p.sendMessage(org.bukkit.ChatColor.RED + "Только владелец привата может забирать аметисты.");
+                    return;
+                }
+            }
+        }
 
         // dragging into top inventory: allow ONLY amethysts into slots 36-53
         for (int raw : e.getRawSlots()){

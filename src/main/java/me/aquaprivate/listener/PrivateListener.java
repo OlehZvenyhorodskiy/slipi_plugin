@@ -30,6 +30,7 @@ import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntityPortalEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
@@ -516,27 +517,49 @@ public final class PrivateListener implements Listener {
             return;
         EntityType t = e.getEntityType();
 
-        // 1) Never allow wither / wither skull explosions to destroy blocks inside
-        // privates.
+        // 1) Never allow wither / wither skull explosions to destroy blocks inside privates.
         if (t == EntityType.WITHER || t == EntityType.WITHER_SKULL) {
             e.blockList().removeIf(b -> getPrivateAt(b.getLocation()).isPresent());
             return;
         }
 
         // 2) End crystal: do not deform privates (no block damage inside privates)
-        // NOTE: Spigot 1.21+ uses END_CRYSTAL (ENDER_CRYSTAL does not exist)
         if (t == EntityType.END_CRYSTAL) {
             e.blockList().removeIf(b -> getPrivateAt(b.getLocation()).isPresent());
             return;
         }
 
-        // 3) TNT / TNT minecart / creeper: if marker block is within radius 1 of
-        // explosion,
+        // 3) TNT / TNT minecart / creeper: if marker block is within radius 1 of explosion,
         // remove region and drop private block item.
-        // NOTE: Spigot 1.21+ uses TNT and TNT_MINECART (PRIMED_TNT / MINECART_TNT may
-        // not exist)
+        // SECURITY FIX: Only destroy markers if the explosive source has permission.
         if (t == EntityType.TNT || t == EntityType.TNT_MINECART || t == EntityType.CREEPER) {
-            destroyMarkersNear(e.getLocation(), 1);
+            Entity entity = e.getEntity();
+            Player responsible = null;
+
+            // Find who is responsible for this explosion
+            if (entity instanceof org.bukkit.entity.TNTPrimed tnt) {
+                Entity source = tnt.getSource();
+                if (source instanceof Player p) responsible = p;
+            } else if (t == EntityType.CREEPER) {
+                // Check if creeper was ignited by a player (not naturally)
+                try {
+                    if (entity.hasMetadata("source_player")) {
+                        List<org.bukkit.metadata.MetadataValue> vals = entity.getMetadata("source_player");
+                        for (var mv : vals) {
+                            if (mv.value() instanceof Player p) { responsible = p; break; }
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            // If we can identify a responsible player, only destroy markers they own or have rights to
+            if (responsible != null) {
+                final Player finalResponsible = responsible;
+                destroyMarkersNearIfAllowed(e.getLocation(), 1, finalResponsible);
+            } else {
+                // Unattributed explosion (natural creeper, etc.) - destroy markers as before
+                destroyMarkersNear(e.getLocation(), 1);
+            }
         }
     }
 
@@ -544,6 +567,52 @@ public final class PrivateListener implements Listener {
     public void onBlockExplode(BlockExplodeEvent e) {
         // Covers rare cases of block-caused explosions.
         destroyMarkersNear(e.getBlock().getLocation(), 1);
+    }
+
+    /**
+     * Prevents TNT and TNT minecarts from traveling through ANY dimension portals.
+     * This closes the End Portal exploit where teleported explosives lose their
+     * owner metadata and spawn at the Overworld destination above protected regions,
+     * bypassing WorldGuard permission checks.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityPortal(EntityPortalEvent e) {
+        Entity entity = e.getEntity();
+        if (entity == null) return;
+
+        EntityType type = entity.getType();
+        if (type == EntityType.TNT || type == EntityType.TNT_MINECART) {
+            e.setCancelled(true);
+            // Remove the entity to prevent it from re-triggering or lingering
+            entity.remove();
+        }
+    }
+
+    private void destroyMarkersNearIfAllowed(Location center, int radius, Player responsible) {
+        World w = center.getWorld();
+        if (w == null) return;
+
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    Location l = new Location(w,
+                            center.getBlockX() + dx,
+                            center.getBlockY() + dy,
+                            center.getBlockZ() + dz);
+                    Optional<PrivateRecord> rec = plugin.store().byLocation(
+                            w.getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ());
+                    if (rec.isPresent()) {
+                        PrivateRecord r = rec.get();
+                        // Only destroy if the responsible player is the owner, OP, or has bypass
+                        if (r.owner != null && (r.owner.equals(responsible.getUniqueId())
+                                || responsible.isOp()
+                                || responsible.hasPermission("aquaprivate.bypass"))) {
+                            destroyPrivateMarker(l, r);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void destroyMarkersNear(Location center, int radius) {
