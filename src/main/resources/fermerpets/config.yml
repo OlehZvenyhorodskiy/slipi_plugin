@@ -1,0 +1,150 @@
+# ===============================
+# FermerPets — Конфигурация
+# ===============================
+# Все значения можно менять без перезагрузки сервера командой /fermerpets reload
+#
+# ВНИМАНИЕ про радиусы:
+#  - Плагин использует ключ pet.target-distance как «дистанцию зрения» для ПОДБОРА и СБОРА.
+#  - Если pet.target-distance не задан, будут использованы legacy-ключи pet.pickup-radius и pet.harvest-radius.
+#    Рекомендуется оставить target-distance и удалить отдельные радиусы.
+#
+pet:
+  # Какой моб используется как визуал питомца.
+  # Допустимо: FOX, ALLAY, ENDERMAN, VILLAGER, PARROT и т.п.
+  type: FOX
+
+  # На каком расстоянии питомец старается держаться от владельца.
+  follow-distance: 30
+
+  # Частота тиков, с которой работает ИИ питомца (1 тик = 50 мс).
+  sweep-period-ticks: 7
+
+  # ОБЩАЯ дистанция «зрения» питомца — на каком расстоянии он видит цели (урожай/предметы).
+  # Если указано — перекрывает pickup-radius и harvest-radius.
+  target-distance: 30
+
+  # === Legacy (устаревшие) ключи ===
+  # Если target-distance не указан -> используются они.
+  pickup-radius: 3      # радиус подбора предметов (устарело, лучше использовать target-distance)
+  harvest-radius: 30    # радиус поиска зрелых культур (устарело, лучше использовать target-distance)
+
+  # Куда доставлять лут: DIRECT — прямо в инвентарь владельца; DROP — сбрасывать у ног владельца.
+  deliver-mode: DIRECT
+
+  # Пересаживать ли культуру после сбора (если есть семена/саженцы в дропах).
+  replant: true
+
+  # Максимальное число питомцев на игрока (лимит).
+  max-pets-per-player: 4
+
+  # Автосаммон после перезапуска плагина только для игроков,
+  # у которых в players.yml есть записи (совместимо со «Хранителями»).
+  auto-summon-from-players: true
+
+  # Задержка между сбором культур (в тиках). Питомец собирает ПО ОДНОЙ культуре за цикл.
+  harvest-delay-ticks: 10
+
+# Список культур/блоков для сбора. Можно дополнять.
+harvest:
+  crops:
+    - WHEAT
+    - CARROTS
+    - POTATOES
+    - BEETROOTS
+    - NETHER_WART
+    - SWEET_BERRY_BUSH
+    - PUMPKIN
+    - MELON
+    - SUGAR_CANE
+    - CACTUS
+    - COCOA
+    - RED_MUSHROOM
+    - BROWN_MUSHROOM
+    - KELP
+    - BAMBOO
+
+# Шаблон отображаемого имени питомца.
+# %prefix% — префикс игрока (через Vault, если установлен); %player% — ник игрока.
+# Сделано «как у Хранителей», только слово — «Фермер».
+name:
+  format: "%vault-prefix% &6Фермер &7(%owner%)"
+  pattern: "&7%prefix% &eФермер &7(%player%)"
+
+# Визуальная голова (если используете кастомные головы/декор).
+visual-head:
+  source: HDB           # HDB — брать по HeadDatabase ID; иначе используется base64 ниже
+  hdb-id: "43500"
+  base64: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODM2Yjk2ZTdjNTdkZjk5Yzc3M2YyZmJjZjRmMjYwZjA5M2NmNjZlZTEyNjk4MjQ3NzFmZjk4MzA4NGEyNzA1YSJ9fX0="
+
+
+debug:
+  enable: false
+
+water:
+  escape_enabled: false
+  escape_up_velocity: 0.5
+  breach_cooldown_ticks: 10
+  surface_clearance: 1.2
+
+delivery:
+  stay_ticks: 15
+
+movement:
+  smoothing:
+    enabled: true
+    alpha: 0.35
+    jerkLimit: 0.06
+    yawTurnRateDeg: 8.0
+    stopRadius: 0.35
+    forwardBias: 0.02
+    switchCooldown: 10
+    stepBoostTicks: 3
+    stepBoost: 0.08
+    flyUpVy: 0.45
+    walkSpeedCap: 0.33
+    flySpeedCap: 0.50
+    nearNoThrottle: 5.0
+    flyEnterGap: 1.0
+    flyExitGap: 0.6
+
+items:
+  hopper_name: "&6Воронка для фермера"
+  beacon_name: "&bСветильник энда — центр радиуса (#%index%)"
+
+fuel:
+  material: AMETHYST_SHARD
+  period_minutes: 10
+
+# ===============================
+# Чанки / производительность
+# ===============================
+# По умолчанию плагин НЕ должен принудительно держать чанки загруженными.
+# Это защищает сервер от больших просадок TPS и "Can't keep up" при большом количестве ферм.
+chunks:
+  # Если true — плагин будет ставить plugin-chunk-ticket и forceLoaded вокруг воронки/маяка.
+  # ВКЛЮЧАТЬ только если вы точно понимаете нагрузку.
+  force_loaded: false
+
+  # Если true — держать чанки загруженными даже когда владелец оффлайн.
+  # Работает только если force_loaded=true.
+  keep_loaded_offline: false
+
+  # Если true — при старте/перезагрузке плагин будет подгружать чанки с воронками/маяками,
+  # чтобы восстановить блоки/частицы сразу. Если false — ничего не будет грузиться на старте,
+  # а восстановление произойдёт когда игрок сам прогрузит чанк.
+  load_on_startup: false
+
+
+visual:
+  outline:
+    height: 30  # половина высоты вверх/вниз для подсветки кубом
+    enabled: true
+    tickPeriod: 40
+    step: 4
+    radii: [20,25,30,35,40]
+    particles:
+      "20": FLAME
+      "25": SOUL_FIRE_FLAME
+      "30": SNOWFLAKE
+      "35": REVERSE_PORTAL
+      "40": NAUTILUS

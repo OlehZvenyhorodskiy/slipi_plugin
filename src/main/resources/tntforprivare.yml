@@ -1,0 +1,95 @@
+# Конфиг уникальных TNT (можно добавлять несколько типов)
+
+ehoboom:
+  # Какие типы взрывов разрешены внутри приват-регионов.
+  # (Важное: наш уникальный TNT работает в приватах независимо от этого списка)
+  explosions-allowed:
+    creeper: false
+    tnt: false
+    minecart-tnt: false
+    wither-skull: false
+    wither: false
+    crystal: false
+
+  unique-tnt:
+    item:
+      material: TNT
+      name: "§x§0§8§4§c§f§bЭ§x§2§0§6§4§f§bх§x§3§7§7§c§f§cО §x§4§f§9§4§f§cБ§x§6§6§a§b§f§cу§x§7§e§c§3§f§cу§x§9§5§d§b§f§dу§x§a§d§f§3§f§dМ"
+      lore:
+        - "&7Взрыв от ТНТ дропает спавнера"
+        - "&7даже в приватах"
+      glow: true
+
+    craft:
+      pattern:
+        - "TTT"
+        - "OLO"
+        - "OOO"
+      ingredients:
+        T: BEDROCK
+        L: BEDROCK
+        O: BEDROCK
+
+
+obsidian:
+  # Какие типы взрывов разрешены внутри приват-регионов.
+  # (Важное: наш уникальный TNT работает в приватах независимо от этого списка)
+  explosions-allowed:
+    creeper: false
+    tnt: false
+    minecart-tnt: false
+    wither-skull: false
+    wither: false
+    crystal: false
+
+  unique-tnt:
+    item:
+      material: TNT
+      name: "&x&B&2&1&1&F&BО&x&B&6&1&0&F&BБ&x&B&A&1&0&F&CС&x&B&F&0&F&F&CИ&x&C&3&0&E&F&CД&x&C&7&0&E&F&CИ&x&C&B&0&D&F&DА&x&D&0&0&D&F&DН&x&D&4&0&C&F&DО&x&D&8&0&B&F&EВ&x&D&C&0&B&F&EЫ&x&E&0&0&A&F&EЙ &x&E&5&0&9&F&ET&x&E&9&0&9&F&FN&x&E&D&0&8&F&FT"
+      lore:
+        - "&7Взрывает обсидиант, плачущий обсидиант"
+        - "&7взрывает древние обломки"
+      glow: true
+
+    craft:
+      pattern:
+        - "TTT"
+        - "OLO"
+        - "OOO"
+      ingredients:
+        T: BEDROCK
+        L: BEDROCK
+        O: BEDROCK
+
+
+razrivnoe:
+  # Какие типы взрывов разрешены внутри приват-регионов.
+  # (Важное: наш уникальный TNT работает в приватах независимо от этого списка)
+  explosions-allowed:
+    creeper: false
+    tnt: false
+    minecart-tnt: false
+    wither-skull: false
+    wither: false
+    crystal: false
+
+  unique-tnt:
+    item:
+      material: TNT
+      name: "&x&F&B&E&7&2&0Р&x&F&B&D&2&1&DА&x&F&C&B&D&1&AЗ&x&F&C&A&9&1&7Р&x&F&C&9&4&1&4Ы&x&F&D&7&F&1&1В&x&F&D&6&A&0&FН&x&F&E&5&5&0&CО&x&F&E&4&0&0&9Е &x&F&E&2&C&0&6T&x&F&F&1&7&0&3N&x&F&F&0&2&0&0T"
+      lore:
+        - "&7Врывает радиусом 9 на 9 блоков."
+        - "&7В регионах защитных камней разрывает"
+        - "&69 &7на &69 &7блоков, если не призваны &6Хранители"
+        - "&7Наносит урон &6Хранителям &7, ослабляет защиту региона"
+      glow: true
+
+    craft:
+      pattern:
+        - "TTT"
+        - "OLO"
+        - "OOO"
+      ingredients:
+        T: BEDROCK
+        L: BEDROCK
+        O: BEDROCK

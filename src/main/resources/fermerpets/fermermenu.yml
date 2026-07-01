@@ -1,0 +1,120 @@
+menu_title: '&6МЕНЮ ФЕРМЕРА'
+size: 54
+
+# Costs
+cost:
+  activation: 10
+  upkeep_minutes: 30
+  upkeep_amount: 5
+hoe:
+  material: GOLDEN_HOE
+  name: "&6ФЕРМЕР"
+  lore:
+    - "&7Фермер собирает любую культуру,"
+    - "&7любой урожай внутри границы Вашего регионау"
+    - "&7Можно призвать до 3х &6Фермеров"
+    - "&7Нажмите на Яйцо Фермара и он призовется"
+    - "&7Повторное нажатие его удалит"
+    - '&8--------------------'
+    - "&7Весь урожай он складывает на блок привата"
+    - '&7при необходимости возьмите Воронку (кликните по ней)'
+    - '&7и весь лут будет собираться в эту воронку'
+    - '&7Активация фермера стоит &610 &7Аметистов.'
+    - '&7каждые &630 &7минут Фермер забирает &65 &7Аметистов'
+    - '&7ему тоже нужно питаться'
+  slot: 4
+
+eggfermer1:
+  material: FOX_SPAWN_EGG
+  name: "&6Фермер %fermer1%"
+  slot: 19
+  click_action: toggle_fermer1
+eggfermer2:
+  material: FOX_SPAWN_EGG
+  name: "&6Фермер %fermer2%"
+  slot: 22
+  click_action: toggle_leveling
+eggfermer3:
+  material: FOX_SPAWN_EGG
+  name: "&6Фермер %fermer3%"
+  slot: 25
+  click_action: toggle_leveling
+
+give_tokens:
+  material: HOPPER
+  name: "&dВыдать Воронку для сбора урожая"
+  lore:
+    - "&7Установите воронку там, куда приносить лут."
+  glow: true
+  slot: 30
+  click_action: toggle_leveling
+delete_tokens:
+  material: BARRIER
+  name: "&cУдалить воронку фемера"
+  lore:
+    - "&7Удаляет выданнуб воронку (если потеряли)."
+  slot: 32
+
+orange:
+  material: LIME_STAINED_GLASS_PANE
+  display_name: '&7'
+  slots:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 20
+    - 21
+    - 23
+    - 24
+    - 26
+    - 27
+    - 28
+    - 29
+    - 31
+    - 33
+    - 34
+    # 35 reserved for return button
+
+ametyst: # Слоты для аметистов
+  material: ''
+  display_name: '&7'
+  slots:
+    - 36
+    - 37
+    - 38
+    - 39
+    - 40
+    - 41
+    - 42
+    - 43
+    - 44
+    - 45
+    - 46
+    - 47
+    - 48
+    - 49
+    - 50
+    - 51
+    - 52
+    - 53
+
+return:
+  material: ARROW
+  name: "&6ВОЗВРАТ"
+  slot: 35
+  click_action: toggle_return

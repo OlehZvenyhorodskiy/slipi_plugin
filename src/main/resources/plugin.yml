@@ -1,0 +1,53 @@
+name: AquaPrivate
+main: me.aquaprivate.AquaPrivatePlugin
+version: 1.0.0
+api-version: '1.20'
+author: SlepniR
+website: https://aqua-mix.com
+depend:
+- WorldGuard
+- WorldEdit
+softdepend:
+- ViaVersion
+- PlaceholderAPI
+- HeadDatabase
+- Citizens
+- AquaClans
+commands:
+  aquaprotection:
+    aliases:
+    - aquaprivate
+    description: AquaPrivate commands
+    usage: /aquaprotection give <player> <amount> | /aquaprotection list [player] | /aquaprotection home [player]
+  ap:
+    aliases:
+    - ps
+    description: Управление участниками привата
+    usage: /ap add <player> | /ap remove <player> | /ap upgrade <player> <private>
+permissions:
+  aquaprivate.place:
+    default: op
+  aquaprivate.addmember:
+    default: op
+  aquaprivate.delete:
+    default: op
+  aquaprivate.give:
+    default: op
+  aquaprivate.list:
+    default: op
+  aquaprivate.list.admin:
+    default: op
+  aquaprivate.home:
+    default: op
+  aquaprivate.home.admin:
+    default: op
+  aquaprivate.upgrade:
+    default: op
+  guardianparrot.give:
+    default: op
+  guardianparrot.summon:
+    default: op
+  guardianparrot.unsummon:
+    default: op
+  guardianparrot.admin.reload:
+    default: op

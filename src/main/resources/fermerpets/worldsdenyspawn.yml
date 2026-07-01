@@ -1,0 +1,11 @@
+# Список РАЗРЕШЁННЫХ регионов по мирам.
+# Питомец может находиться ТОЛЬКО в перечисленных регионах, иначе будет задеспавнен.
+worlds:
+  world:
+    - __global__
+  world_nether:
+    - __global__
+  world_the_end:
+    - __global__
+  spawnnnNEW:
+    - spawnnnnew

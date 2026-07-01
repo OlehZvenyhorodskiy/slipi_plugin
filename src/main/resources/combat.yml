@@ -1,0 +1,10 @@
+# combat.yml — настройки боевого поведения стража-попугая (тики: 20 = 1 сек)
+warden-strike-interval: 40        # каждые 2 сек
+wither-shoot-interval: 60          # каждые 3 сек
+teleport-distance: 30              # при отрыве телепорт
+scan-interval: 5                   # тиков между поиском цели
+aggro-radius: 20                   # радиус вокруг игрока
+
+# damage defaults for labels
+wither-damage: 6
+warden-damage: 8

@@ -1,0 +1,12 @@
+# players.yml — состояние питомцев по игрокам
+# Формат совместим с плагином «Хранители»:
+#   - основной (FermerPets): players.<uuid>.pets: [<uuid питомца>, ...]
+#   - допустимые legacy-форматы чтения (НЕ обязательно заполнять):
+#       owners.<uuid>.pets
+#       players.<uuid>
+#       players.<uuid>.entities
+#       guardians.<uuid>.list
+#
+# Плагин ЧИТАЕТ все варианты, а ЗАПИСЫВАЕТ в players.<uuid>.pets,
+# не ломая старые структуры.
+players: {}
